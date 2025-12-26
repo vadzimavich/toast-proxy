@@ -195,7 +195,7 @@ async def series_build_episodes(client: httpx.AsyncClient, imdb_id: str, tmdb_id
                     "firstAired": episode['air_date'] + 'T05:00:00.000Z' if episode['air_date'] is not None else None,
                     "rating": str(episode['vote_average']),
                     "overview": episode['overview'],
-                    "thumbnail": tmdb.TMDB_BACK_URL + episode['still_path'] if episode.get('still_path', '') is not None else None,
+                    "thumbnail": tmdb.get_proxied_image_url(episode.get('still_path'), 'original'),
                     "id": f"{imdb_id}:{episode['season_number']}:{episode_number}",
                     "released": episode['air_date'] + 'T05:00:00.000Z' if episode['air_date'] is not None else None,
                     "episode": episode_number,
