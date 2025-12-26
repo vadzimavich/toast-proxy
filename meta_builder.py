@@ -206,19 +206,27 @@ async def series_build_episodes(client: httpx.AsyncClient, imdb_id: str, tmdb_id
     return videos
 
 
+    
 def convert_minutes_hours(value):
-    total_minutes = int(str(value).replace("min", "").strip())
+    # Очищаем от лишних символов, если они есть
+    clean_value = str(value).replace("min", "").replace("m", "").strip()
+    
+    try:
+        total_minutes = int(clean_value)
+    except ValueError:
+        return str(value) # Возвращаем как есть, если не число
     
     if total_minutes < 60:
-        return f"{total_minutes}min"
+        return f"{total_minutes} мин"
     
     hours = total_minutes // 60
     minutes = total_minutes % 60
     
     if minutes > 0:
-        return f"{hours}h{minutes}min"
+        return f"{hours} ч {minutes} мин"
     else:
-        return f"{hours}h"
+        return f"{hours} ч"
+
     
 
 def extract_series_episode_runtime(tmdb_data: dict, cinemeta_data: dict) -> str:
@@ -342,7 +350,7 @@ def build_links(imdb_id: str, title: str, slug: str, rating: str,
     for genre in genres:
         links.append({
             "name": genre,
-            "category": "Genres",
+            "category": "Жанры",
             "url": f"stremio:///discover/https%3A%2F%2FPLACEHOLDER%2Fmanifest.json/movie/top?genre={urllib.parse.quote(genre)}"
         })
 
@@ -350,7 +358,7 @@ def build_links(imdb_id: str, title: str, slug: str, rating: str,
     for actor in cast:
         links.append({
             "name": actor,
-            "category": "Cast",
+            "category": "Актеры",
             "url": f"stremio:///search?search={urllib.parse.quote(actor)}"
         })
 
@@ -358,7 +366,7 @@ def build_links(imdb_id: str, title: str, slug: str, rating: str,
     for writer in writers:
         links.append({
             "name": writer,
-            "category": "Writers",
+            "category": "Сценаристы",
             "url": f"stremio:///search?search={urllib.parse.quote(writer)}"
         })
 
@@ -366,7 +374,7 @@ def build_links(imdb_id: str, title: str, slug: str, rating: str,
     for director in directors:
         links.append({
             "name": director,
-            "category": "Directors",
+            "category": "Режиссеры",
             "url": f"stremio:///search?search={urllib.parse.quote(director)}"
         })
 

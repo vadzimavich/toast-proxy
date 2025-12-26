@@ -154,7 +154,7 @@ async def translate_episodes(client: httpx.AsyncClient, original_episodes: list[
             except: pass
             try: new_episodes[t_index]['description'] = detail['overview']
             except: pass
-            try: new_episodes[t_index]['thumbnail'] = tmdb.get_proxied_image_url(detail['still_path'], 'original')
+            try: new_episodes[t_index]['thumbnail'] = tmdb.get_proxied_image_url(detail.get('still_path'), 'original')
             except: pass
 
     return new_episodes
