@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Toast Translator Dashboard</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      background-color: #fafafa;
+      color: #333;
+      text-align: center;
+      padding: 2rem;
+    }
+    .container {
+      background: white;
+      border-radius: 1rem;
+      padding: 2rem;
+      box-shadow: 0 0 20px rgba(0,0,0,0.05);
+      max-width: 650px;
+      margin: auto;
+    }
+    .title {
+      margin-bottom: 1.5rem;
+    }
+    .title span.toast {
+      font-weight: bold;
+      font-size: 1.8rem;
+    }
+    .title span.translator {
+      font-weight: 300;
+      margin-left: 0.5rem;
+      color: #666;
+    }
+    .section {
+      margin-top: 1.8rem;
+      border-top: 1px solid #eee;
+      padding-top: 1rem;
+    }
+    .section h3 {
+      color: #555;
+      font-weight: 600;
+    }
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.7rem;
+      margin-top: 1rem;
+    }
+    .buttons button {
+      padding: 0.6rem 1.2rem;
+      border: none;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      background: #007bff;
+      color: white;
+      transition: background 0.2s;
+    }
+    .buttons button:hover {
+      background: #0056b3;
+    }
+    .buttons button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.8rem;
+      margin-top: 1rem;
+    }
+    .stat-card {
+      background: #f8f9fa;
+      border-radius: 0.5rem;
+      padding: 0.8rem;
+      box-shadow: 0 0 5px rgba(0,0,0,0.05);
+    }
+    .stat-card h4 {
+      margin: 0;
+      font-size: 1rem;
+      color: #444;
+    }
+    .stat-card p {
+      font-size: 1.2rem;
+      font-weight: bold;
+      margin: 0.3rem 0 0;
+    }
+    input[type="file"] { display: none; }
+
+    /* Popup */
+    #popup {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #333;
+      color: white;
+      padding: 1rem 1.5rem;
+      border-radius: 0.5rem;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      display: none;
+      z-index: 1000;
+      font-weight: 500;
+      width: 250px;
+      text-align: center;
+    }
+    #popup.success { background: #28a745; }
+    #popup.error { background: #dc3545; }
+    #popup.info { background: #007bff; }
+
+    /* Progress bar sotto popup */
+    #progressBarContainer {
+      width: 100%;
+      background: #eee;
+      border-radius: 0.25rem;
+      margin-top: 0.5rem;
+      height: 8px;
+      overflow: hidden;
+    }
+    #progressBar {
+      height: 100%;
+      width: 0%;
+      background: #28a745;
+      transition: width 0.2s;
+    }
+  </style>
+</head>
+<body>
+  <div id="popup">
+    <span id="popupText"></span>
+    <div id="progressBarContainer" style="display:none;">
+      <div id="progressBar"></div>
+    </div>
+  </div>
+
+  <div class="container" id="login">
+    <h2>🔐 Accesso alla Dashboard</h2>
+    <input type="password" id="password" placeholder="Inserisci la password">
+    <br>
+    <button id="loginBtn">Accedi</button>
+  </div>
+
+  <div class="container" id="dashboard" style="display:none;">
+    <div class="title">
+      <span class="toast">Toast</span>
+      <span class="translator">Dashboard</span>
+    </div>
+
+    <div class="section">
+      <h3>📊 Statistiche Cache</h3>
+      <div id="cacheStats" class="stats">
+        <div class="stat-card"><h4>Kitsu</h4><p id="statKitsu">-</p></div>
+        <div class="stat-card"><h4>MAL</h4><p id="statMal">-</p></div>
+        <div class="stat-card"><h4>TMDB</h4><p id="statTmdb">-</p></div>
+        <div class="stat-card"><h4>Translator</h4><p id="statTranslator">-</p></div>
+        <div class="stat-card"><h4>Meta</h4><p id="statMeta">-</p></div>
+      </div>
+      <h4 style="margin-top:1rem;">Totale: <span id="statTotal">-</span></h4>
+      <div class="buttons">
+        <button id="refreshStats">🔁 Aggiorna Dati Cache</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>🧠 Cache Management</h3>
+      <div class="buttons">
+        <button id="clearCache">🧹 Pulisci Cache</button>
+        <button id="reopenCache">♻️ Riapri Cache</button>
+        <button id="downloadCache">📦 Scarica Cache (.zip)</button>
+        <button id="uploadBtn" disabled>📤 Carica Cache (.zip)</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>🎬 Anime Tools</h3>
+      <div class="buttons">
+        <button id="reloadIDs">🔄 Ricarica ID Anime</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>👤 Account</h3>
+      <div class="buttons">
+        <button id="logout">🚪 Logout</button>
+      </div>
+    </div>
+
+    <input type="file" id="fileInput" accept=".zip">
+  </div>
+
+  <script>
+    const UPLOADER_URL = "https://toasttrans-tmp.hf.space/upload";
+    const popup = document.getElementById("popup");
+    const popupText = document.getElementById("popupText");
+    const progressBarContainer = document.getElementById("progressBarContainer");
+    const progressBar = document.getElementById("progressBar");
+
+    const loginDiv = document.getElementById("login");
+    const dashboardDiv = document.getElementById("dashboard");
+    const passwordInput = document.getElementById("password");
+    const uploadBtn = document.getElementById("uploadBtn");
+
+    function showPopup(msg, type="info", showProgress=false) {
+      popupText.textContent = msg;
+      popup.className = type;
+      popup.style.display = "block";
+      progressBarContainer.style.display = showProgress ? "block" : "none";
+      if (!showProgress) progressBar.style.width = "0%";
+    }
+
+    function hidePopup() {
+      popup.style.display = "none";
+    }
+
+    function getPassword() {
+      return localStorage.getItem("apiPassword");
+    }
+
+    function showDashboard() {
+      loginDiv.style.display = "none";
+      dashboardDiv.style.display = "block";
+      uploadBtn.disabled = false;
+      loadCacheStats();
+    }
+
+    if (getPassword()) showDashboard();
+
+    document.getElementById("loginBtn").onclick = async () => {
+      const password = passwordInput.value.trim();
+      if (!password) return showPopup("Inserisci la password ⚠️", "error");
+
+      try {
+        const res = await fetch(`/check_auth?password=${encodeURIComponent(password)}`);
+        if (res.ok) {
+          localStorage.setItem("apiPassword", password);
+          showDashboard();
+          showPopup("Accesso riuscito ✅", "success");
+          setTimeout(hidePopup, 3000);
+        } else showPopup("Password errata ❌", "error");
+      } catch { showPopup("Errore di connessione ❌", "error"); }
+    };
+
+    document.getElementById("logout").onclick = () => {
+      localStorage.removeItem("apiPassword");
+      location.reload();
+    };
+
+    async function secureFetch(endpoint, success, error) {
+      const password = getPassword();
+      if (!password) return showPopup("Devi accedere prima 🔐", "error");
+      try {
+        const res = await fetch(`${endpoint}?password=${encodeURIComponent(password)}`);
+        if (res.ok) showPopup(success, "success");
+        else showPopup(error, "error");
+      } catch { showPopup("Errore di connessione ❌", "error"); }
+    }
+
+    document.getElementById("clearCache").onclick = () =>
+      secureFetch("/clean_cache", "Cache pulita ✅", "Errore pulizia ❌");
+    document.getElementById("reloadIDs").onclick = () =>
+      secureFetch("/map_reload", "ID Anime ricaricati ✅", "Errore ricarica ❌");
+    document.getElementById("reopenCache").onclick = () =>
+      secureFetch("/cache_reopen", "Cache riaperta ✅", "Errore riapertura ❌");
+
+    document.getElementById("downloadCache").onclick = async () => {
+      const password = getPassword();
+      if (!password) return showPopup("Devi accedere prima 🔐", "error");
+      try {
+        const res = await fetch(`/download_cache?password=${encodeURIComponent(password)}`);
+        if (!res.ok) throw new Error();
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = "cache.zip"; a.click();
+        URL.revokeObjectURL(url);
+        showPopup("Download completato ✅", "success");
+        setTimeout(hidePopup, 3000);
+      } catch { showPopup("Errore download ❌", "error"); }
+    };
+
+    // Upload cache con percentuale
+    const fileInput = document.getElementById("fileInput");
+    uploadBtn.onclick = () => {
+      if (!getPassword()) return showPopup("Devi accedere prima 🔐", "error");
+      fileInput.click();
+    };
+
+    fileInput.onchange = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const password = getPassword();
+      if (!password) return showPopup("Devi accedere prima 🔐", "error");
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", UPLOADER_URL);
+
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const percent = Math.floor((event.loaded / event.total) * 100);
+          progressBar.style.width = percent + "%";
+          showPopup(`Caricamento in corso: ${percent}% ⏳`, "info", true);
+        }
+      };
+
+      xhr.onload = async () => {
+        if (xhr.status === 200) {
+          try {
+            const data = JSON.parse(xhr.responseText);
+            const url = data.url;
+            const res = await fetch(`/upload_cache?password=${encodeURIComponent(password)}&file_url=${encodeURIComponent(url)}`, { method: "POST" });
+            if (res.ok) {
+              showPopup("Cache sostituita ✅", "success");
+              setTimeout(hidePopup, 3000);
+            } else showPopup("Errore sostituzione ❌", "error");
+          } catch {
+            showPopup("Errore risposta server ❌", "error");
+          }
+        } else showPopup("Errore upload ❌", "error");
+      };
+
+      xhr.onerror = () => { showPopup("Errore upload ❌", "error"); };
+      xhr.send(formData);
+    };
+
+    async function loadCacheStats() {
+      const password = getPassword();
+      if (!password) return;
+      try {
+        const res = await fetch(`/get_cache_dimension?password=${encodeURIComponent(password)}`);
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        document.getElementById("statKitsu").textContent = data.kitsu;
+        document.getElementById("statMal").textContent = data.mal;
+        document.getElementById("statTmdb").textContent = data.tmdb;
+        document.getElementById("statTranslator").textContent = data.translator;
+        document.getElementById("statMeta").textContent = data.meta;
+        document.getElementById("statTotal").textContent = data.total;
+        showPopup("Statistiche aggiornate ✅", "success");
+        setTimeout(hidePopup, 3000);
+      } catch {
+        showPopup("Errore nel caricamento statistiche ❌", "error");
+      }
+    }
+
+    document.getElementById("refreshStats").onclick = loadCacheStats;
+  </script>
+</body>
+</html>
